@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import requests
+import json
 import tkinter as tk
 from tkinter import ttk, font, Canvas, Entry
 
-#створення вікна
+# створення вікна
 window = tk.Tk()
 
 window.title('CRYPT.o')
@@ -13,13 +14,13 @@ window.resizable(False,False)
 
 window.configure(background='#2B2B2B')
 
-#ініціалізація шрифту
+# ініціалізація шрифту
 
 customFont20 = font.Font(family='Chakra Petch', size=20)
 customFont15 = font.Font(family='Chakra Petch', size=15)
 customFont10 = font.Font(family='Chakra Petch', size=10)
 
-#створення заокругленого квадрату для інтерфейсу
+# створення заокругленого квадрату для інтерфейсу
 
 def round_rectangle(x1, y1, x2, y2, radius=25, **kwargs):
         
@@ -46,7 +47,7 @@ def round_rectangle(x1, y1, x2, y2, radius=25, **kwargs):
 
     return canvas.create_polygon(points, **kwargs, smooth=True)
 
-#створення віджетів  
+# створення віджетів  
 canvas = Canvas(window, width=892, height=553, background='#2B2B2B', highlightthickness=0)
 canvas.pack()
 
@@ -103,5 +104,82 @@ entryToCoin.place(x=50,y=327)
 labelToPrice = ttk.Label(window, background='#535353',foreground='white',justify='center', borderwidth=0, font=customFont15,width=12)
 labelToPrice.place(x=50,y=377)
 
-#запуск вікна
+def get_coin_price(coin, exchange, side):
+    if exchange.lower() == 'binance':
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin.upper()}USDT"
+        response = requests.get(url)
+        data = json.loads(response.text)
+        price = float(data['price'])
+    elif exchange.lower() == 'coinbase':
+        url = f"https://api.coinbase.com/v2/prices/{coin.upper()}-USD/{side.lower()}"
+        response = requests.get(url)
+        data = json.loads(response.text)
+        price = float(data['data']['amount'])
+    else:
+        price = None
+    return price
+
+coins = ['btc', 'eth', 'doge', 'ltc', 'bch']
+exchanges = ['binance', 'coinbase']
+sides = ['buy', 'sell']
+
+best_coin_pair = ''
+best_percentage = 0
+best_buy_exchange = ''
+best_sell_exchange = ''
+best_buy_price = 0
+best_sell_price = 0
+
+def getBestChainFunc():
+    for coin in coins:
+        for buy_exchange in exchanges:
+            for sell_exchange in exchanges:
+                for buy_side in sides:
+                    for sell_side in sides:
+                        if buy_exchange == sell_exchange and buy_side == sell_side:
+                            continue
+                        buy_price = get_coin_price(coin, buy_exchange, buy_side)
+                        sell_price = get_coin_price(coin, sell_exchange, sell_side)
+                        if buy_price is None or sell_price is None:
+                            continue
+                        percentage = (sell_price - buy_price) / buy_price * 100
+                        if percentage > best_percentage:
+                            best_coin_pair = coin.upper()
+                            best_percentage = percentage
+                            best_buy_exchange = buy_exchange.capitalize()
+                            best_sell_exchange = sell_exchange.capitalize()
+                            best_buy_price = buy_price
+                            best_sell_price = sell_price
+
+def get_binance_price(coin):
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin.upper()}USDT"
+    response = requests.get(url)
+    data = json.loads(response.text)
+    buy_price = float(data['price'])
+    
+    url_sell = f"https://api.binance.com/api/v3/ticker/price?symbol={coin.upper()}USDT"
+    response_sell = requests.get(url_sell)
+    data_sell = json.loads(response_sell.text)
+    sell_price = float(data_sell['price'])
+    
+    return f"{coin.upper()}, Binance Buy: {buy_price}, Binance Sell: {sell_price}"
+
+# оновлення інтерфейсу
+def update_interface():
+   
+    btc_info = get_binance_price('btc')
+    eth_info = get_binance_price('eth')
+    doge_info = get_binance_price('doge')
+    ltc_info = get_binance_price('ltc')
+    bch_info = get_binance_price('bch')
+
+    labelCoin1.config(text=btc_info)
+    labelCoin2.config(text=eth_info)
+    labelCoin3.config(text=doge_info)
+    labelCoin4.config(text=ltc_info)
+    labelCoin5.config(text=bch_info)
+    window.after(100, update_interface)
+
+update_interface()
+# запуск вікна
 window.mainloop()
