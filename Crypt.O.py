@@ -130,8 +130,6 @@ coins = ['btc', 'eth', 'doge', 'ltc', 'bch']
 exchanges = ['binance', 'coinbase']
 sides = ['buy', 'sell']
 
-
-
 def getBestChainFunc():
     
     best_coin_pair = ''
@@ -183,6 +181,16 @@ def get_binance_price(coin):
     
     return f"{coin.upper()}, Binance Buy: {buy_price}, Binance Sell: {sell_price}"
 
+def calculate_exchange(from_coin, from_price, to_coin):
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={from_coin.upper()}{to_coin.upper()}"
+    response = requests.get(url)
+    data = response.json()
+    if 'price' in data:
+        price = float(data['price'])
+        to_price = from_price * price
+        return to_price
+    else:
+        return None
 
 # оновлення інтерфейсу
 def update_interface():
@@ -198,6 +206,19 @@ def update_interface():
     labelCoin3.config(text=doge_info)
     labelCoin4.config(text=ltc_info)
     labelCoin5.config(text=bch_info)
+
+    if entryFromCoin.get() and entryFromPrice.get() and entryToCoin.get():
+            from_coin = entryFromCoin.get()
+            from_price = float(entryFromPrice.get())
+            to_coin = entryToCoin.get()
+            to_price = calculate_exchange(from_coin, from_price, to_coin)
+            if to_price is not None:
+                labelToPrice.config(text=str(to_price))
+            else:
+                labelToPrice.config(text="Invalid request")
+    else:
+        labelToPrice.config(text="")
+
     window.after(1000, update_interface)
 
 update_interface()
